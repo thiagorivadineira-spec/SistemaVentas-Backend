@@ -2,20 +2,6 @@
 
 Trabajo Práctico de Programación Web N° 3. Sistema de punto de venta para un negocio: registra ventas siempre con usuario autenticado, registra el ingreso de mercadería, mantiene el stock actualizado y genera reportes en PDF.
 
-**Integrantes:** `[Nombre y apellido 1]` · `[Nombre y apellido 2]`
-**Materia / Año:** `[Materia]` · `[Año]`
-
-## Links para verificar el trabajo
-
-| Qué | Link |
-|---|---|
-| Aplicación web (frontend, HTTPS) | https://TU-PROYECTO.pages.dev |
-| API (backend, HTTPS) | https://tp3.runasp.net |
-| Documentación interactiva de la API (Swagger) | https://tp3.runasp.net/swagger/index.html |
-| Repositorio | https://github.com/TU-USUARIO/TU-REPOSITORIO |
-
-Los usuarios de prueba (administrador y cajero) se entregan junto con el trabajo.
-
 ## Arquitectura
 
 ```
@@ -30,20 +16,6 @@ Navegador ──HTTPS──> Frontend: Blazor WebAssembly (Cloudflare Pages)
 |---|---|
 | `SistemaVentasApi/` | Backend: API REST con Entity Framework Core, JWT, Serilog, QuestPDF y MailKit |
 | `SistemaVentasWeb/` | Frontend: Blazor WebAssembly Standalone para escritorio |
-
-## Requisitos de la consigna y dónde se cumplen
-
-| Requisito | Cómo se cumple |
-|---|---|
-| Frontend Blazor WebAssembly Standalone | Proyecto `SistemaVentasWeb`, publicado como sitio estático |
-| Punto de venta, ventas siempre con usuario autenticado | Pantalla `/pos`; `POST api/Ventas` exige token y toma el usuario del token |
-| Entradas de mercadería y stock actualizado | Pantalla `/ingreso` (`POST api/Compras`) suma stock; `/stock` lo muestra en vivo |
-| Reportes PDF de stock, entradas y salidas, y envío por correo | Pantalla `/reportes`; endpoints `api/Reportes/{stock,entradas,salidas}` y `api/Reportes/enviar` |
-| Control de acceso y roles | Roles `Admin`, `Cajero` y `Cliente`; solo el administrador ingresa mercadería (ver tabla de permisos) |
-| Auditoría y registro de errores verificable | Tabla `RegistrosAuditoria` (pantalla `/auditoria`, `GET api/Auditoria`) y archivos de log con Serilog |
-| Repositorio Git, grupo de 2 | Este repositorio |
-| Hosting gratuito con HTTPS | API en MonsterASP.NET y frontend en Cloudflare Pages, ambos con certificado SSL |
-| Base de datos en 3FN | Ver sección "Modelo de datos" |
 
 ## Roles y permisos
 
