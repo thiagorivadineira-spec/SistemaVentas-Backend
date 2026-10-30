@@ -1,0 +1,29 @@
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(Program).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <NotAuthorized>
+                    @if (context.User.Identity?.IsAuthenticated != true)
+                    {
+                        <RedirectToLogin />
+                    }
+                    else
+                    {
+                        <div class="alert alert-danger m-4">
+                            <strong>Acceso denegado.</strong> Tu rol no tiene permiso para ver esta página.
+                        </div>
+                    }
+                </NotAuthorized>
+                <Authorizing>
+                    <p class="m-4">Verificando sesión...</p>
+                </Authorizing>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <div class="alert alert-warning m-4">La página que buscás no existe.</div>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

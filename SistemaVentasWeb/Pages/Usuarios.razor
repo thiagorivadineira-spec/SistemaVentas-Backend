@@ -1,0 +1,168 @@
+@page "/usuarios"
+@attribute [Authorize(Roles = "Admin")]
+@inject ApiClient Api
+
+<PageTitle>Usuarios</PageTitle>
+
+<h1 class="h3 mb-3">Usuarios del sistema</h1>
+
+@if (_ok != null)
+{
+    <div class="alert alert-success">@_ok</div>
+}
+@if (_error != null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold">Nuevo usuario</div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <label class="form-label small mb-1">Nombre</label>
+                    <input class="form-control" @bind="_nuevo.Nombre" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small mb-1">Usuario</label>
+                    <input class="form-control" @bind="_nuevo.Username" autocomplete="off" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small mb-1">Contraseña (mínimo 6 caracteres)</label>
+                    <input type="password" class="form-control" @bind="_nuevo.Password" autocomplete="new-password" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small mb-1">Rol</label>
+                    <select class="form-select" @bind="_nuevo.Rol">
+                        <option value="Cajero">Cajero</option>
+                        <option value="Admin">Administrador</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" disabled="@_procesando" @onclick="Crear">Crear usuario</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        @if (_cargando)
+        {
+            <p class="text-muted">Cargando...</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Usuario</th>
+                            <th>Rol</th>
+                            <th>Estado</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var u in _usuarios)
+                        {
+                            <tr>
+                                <td>@u.Nombre</td>
+                                <td>@u.Username</td>
+                                <td>@(u.Rol == "Admin" ? "Administrador" : u.Rol)</td>
+                                <td>
+                                    <span class="badge @(u.Activo ? "bg-success" : "bg-secondary")">@(u.Activo ? "Activo" : "Inactivo")</span>
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm @(u.Activo ? "btn-outline-danger" : "btn-outline-success")"
+                                            @onclick="() => CambiarEstado(u)">
+                                        @(u.Activo ? "Desactivar" : "Activar")
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<Usuario> _usuarios = new();
+    private UsuarioNuevo _nuevo = new();
+    private string? _ok;
+    private string? _error;
+    private bool _cargando;
+    private bool _procesando;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Cargar();
+    }
+
+    private async Task Cargar()
+    {
+        _cargando = true;
+        var r = await Api.GetUsuariosAsync();
+        _cargando = false;
+
+        if (r.Ok && r.Datos != null)
+        {
+            _usuarios = r.Datos;
+        }
+        else
+        {
+            _error = r.Error;
+        }
+    }
+
+    private async Task Crear()
+    {
+        _ok = null;
+        _error = null;
+
+        if (string.IsNullOrWhiteSpace(_nuevo.Nombre) || string.IsNullOrWhiteSpace(_nuevo.Username))
+        {
+            _error = "Completá nombre y usuario.";
+            return;
+        }
+
+        if (_nuevo.Password.Length < 6)
+        {
+            _error = "La contraseña debe tener al menos 6 caracteres.";
+            return;
+        }
+
+        _procesando = true;
+        var r = await Api.CrearUsuarioAsync(_nuevo);
+        _procesando = false;
+
+        if (r.Ok)
+        {
+            _ok = $"Usuario \"{_nuevo.Username}\" creado.";
+            _nuevo = new UsuarioNuevo();
+            await Cargar();
+        }
+        else
+        {
+            _error = r.Error;
+        }
+    }
+
+    private async Task CambiarEstado(Usuario usuario)
+    {
+        _ok = null;
+        _error = null;
+
+        var r = await Api.CambiarEstadoUsuarioAsync(usuario.Id, !usuario.Activo);
+
+        if (r.Ok)
+        {
+            await Cargar();
+        }
+        else
+        {
+            _error = r.Error;
+        }
+    }
+}

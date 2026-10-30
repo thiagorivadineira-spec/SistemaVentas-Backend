@@ -1,0 +1,217 @@
+@page "/ingreso"
+@attribute [Authorize(Roles = "Admin")]
+@inject ApiClient Api
+
+<PageTitle>Ingreso de mercadería</PageTitle>
+
+<h1 class="h3 mb-3">Ingreso de mercadería</h1>
+
+@if (_ok != null)
+{
+    <div class="alert alert-success">@_ok</div>
+}
+@if (_error != null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="mb-3">
+            <label class="form-label">Proveedor</label>
+            <select class="form-select" @bind="_proveedorId">
+                <option value="0">Seleccionar proveedor...</option>
+                @foreach (var proveedor in _proveedores)
+                {
+                    <option value="@proveedor.Id">@proveedor.RazonSocial</option>
+                }
+            </select>
+        </div>
+
+        <label class="form-label">Buscar producto</label>
+        <input class="form-control mb-2" placeholder="Nombre del producto..." value="@_busqueda" @oninput="AlBuscar" />
+
+        <ul class="list-group">
+            @foreach (var p in _resultados)
+            {
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        @p.Nombre
+                        <small class="text-muted d-block">Stock actual: @p.StockActual</small>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" @onclick="() => Agregar(p)">Agregar</button>
+                </li>
+            }
+        </ul>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold">Mercadería a ingresar</div>
+            <div class="card-body">
+                @if (_lineas.Count == 0)
+                {
+                    <p class="text-muted mb-0">Agregá los productos que llegaron.</p>
+                }
+                else
+                {
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th class="text-end">Stock actual</th>
+                                <th style="width:110px">Cantidad</th>
+                                <th style="width:140px">Costo unitario</th>
+                                <th class="text-end">Subtotal</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var l in _lineas)
+                            {
+                                <tr>
+                                    <td>@l.Producto.Nombre</td>
+                                    <td class="text-end">@l.Producto.StockActual</td>
+                                    <td><input type="number" min="1" class="form-control form-control-sm" @bind="l.Cantidad" /></td>
+                                    <td><input type="number" min="0" step="0.01" class="form-control form-control-sm" @bind="l.PrecioUnitario" /></td>
+                                    <td class="text-end">@Formato.Dinero(l.Subtotal)</td>
+                                    <td><button class="btn btn-sm btn-outline-danger" @onclick="() => Quitar(l)">✕</button></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+
+                    <div class="d-flex justify-content-between align-items-center fs-5 mb-3">
+                        <span>Total del ingreso</span>
+                        <strong>@Formato.Dinero(_lineas.Sum(l => l.Subtotal))</strong>
+                    </div>
+
+                    <button class="btn btn-success" disabled="@_procesando" @onclick="Registrar">
+                        @(_procesando ? "Registrando..." : "Registrar ingreso")
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly Debouncer _debounce = new();
+    private readonly List<LineaIngreso> _lineas = new();
+
+    private List<Proveedor> _proveedores = new();
+    private List<Producto> _resultados = new();
+    private int _proveedorId;
+    private string _busqueda = string.Empty;
+    private string? _ok;
+    private string? _error;
+    private bool _procesando;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var proveedores = await Api.GetProveedoresAsync();
+
+        if (proveedores.Ok && proveedores.Datos != null)
+        {
+            _proveedores = proveedores.Datos.Datos.Where(p => p.Activo).ToList();
+        }
+        else
+        {
+            _error = proveedores.Error;
+        }
+
+        await Buscar();
+    }
+
+    private async Task Buscar()
+    {
+        var r = await Api.GetProductosAsync(_busqueda, 1, 8, "nombre");
+
+        if (r.Ok && r.Datos != null)
+        {
+            _resultados = r.Datos.Datos.Where(p => p.Activo).ToList();
+        }
+        else
+        {
+            _error = r.Error;
+        }
+    }
+
+    private async Task AlBuscar(ChangeEventArgs e)
+    {
+        _busqueda = e.Value?.ToString() ?? string.Empty;
+        await _debounce.EjecutarAsync(Buscar);
+    }
+
+    private void Agregar(Producto producto)
+    {
+        _ok = null;
+        _error = null;
+
+        var existente = _lineas.FirstOrDefault(l => l.Producto.Id == producto.Id);
+
+        if (existente != null)
+        {
+            existente.Cantidad++;
+        }
+        else
+        {
+            _lineas.Add(new LineaIngreso { Producto = producto, Cantidad = 1, PrecioUnitario = 0 });
+        }
+    }
+
+    private void Quitar(LineaIngreso linea) => _lineas.Remove(linea);
+
+    private async Task Registrar()
+    {
+        _ok = null;
+        _error = null;
+
+        if (_proveedorId == 0)
+        {
+            _error = "Seleccioná un proveedor.";
+            return;
+        }
+
+        if (_lineas.Count == 0)
+        {
+            _error = "Agregá al menos un producto.";
+            return;
+        }
+
+        if (_lineas.Any(l => l.Cantidad <= 0 || l.PrecioUnitario <= 0))
+        {
+            _error = "Cada producto debe tener cantidad y costo unitario mayores a cero.";
+            return;
+        }
+
+        _procesando = true;
+
+        var pedido = new CompraRequest
+        {
+            ProveedorId = _proveedorId,
+            Detalles = _lineas.Select(l => new DetalleCompraRequest
+            {
+                ProductoId = l.Producto.Id,
+                Cantidad = l.Cantidad,
+                PrecioUnitario = l.PrecioUnitario
+            }).ToList()
+        };
+
+        var r = await Api.CrearCompraAsync(pedido);
+
+        if (r.Ok && r.Datos != null)
+        {
+            _ok = $"Ingreso #{r.Datos.Id} registrado por {Formato.Dinero(r.Datos.Total)}. El stock fue actualizado.";
+            _lineas.Clear();
+            _proveedorId = 0;
+            await Buscar(); // refresca el stock mostrado
+        }
+        else
+        {
+            _error = r.Error;
+        }
+
+        _procesando = false;
+    }
+}

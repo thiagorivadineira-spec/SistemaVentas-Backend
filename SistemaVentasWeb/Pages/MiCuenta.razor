@@ -1,0 +1,76 @@
+@page "/cuenta"
+@attribute [Authorize]
+@inject ApiClient Api
+
+<PageTitle>Mi cuenta</PageTitle>
+
+<h1 class="h3 mb-3">Mi cuenta</h1>
+
+@if (_ok != null)
+{
+    <div class="alert alert-success">@_ok</div>
+}
+@if (_error != null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
+
+<div class="card shadow-sm" style="max-width:420px">
+    <div class="card-header fw-semibold">Cambiar contraseña</div>
+    <div class="card-body">
+        <div class="mb-2">
+            <label class="form-label small mb-1">Contraseña actual</label>
+            <input type="password" class="form-control" @bind="_actual" autocomplete="current-password" />
+        </div>
+        <div class="mb-2">
+            <label class="form-label small mb-1">Contraseña nueva (mínimo 6 caracteres)</label>
+            <input type="password" class="form-control" @bind="_nueva" autocomplete="new-password" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label small mb-1">Repetir contraseña nueva</label>
+            <input type="password" class="form-control" @bind="_repetir" autocomplete="new-password" />
+        </div>
+        <button class="btn btn-primary" disabled="@_procesando" @onclick="Cambiar">Guardar</button>
+    </div>
+</div>
+
+@code {
+    private string _actual = string.Empty;
+    private string _nueva = string.Empty;
+    private string _repetir = string.Empty;
+    private string? _ok;
+    private string? _error;
+    private bool _procesando;
+
+    private async Task Cambiar()
+    {
+        _ok = null;
+        _error = null;
+
+        if (_nueva.Length < 6)
+        {
+            _error = "La contraseña nueva debe tener al menos 6 caracteres.";
+            return;
+        }
+
+        if (_nueva != _repetir)
+        {
+            _error = "Las contraseñas nuevas no coinciden.";
+            return;
+        }
+
+        _procesando = true;
+        var r = await Api.CambiarPasswordAsync(_actual, _nueva);
+        _procesando = false;
+
+        if (r.Ok)
+        {
+            _ok = "Contraseña actualizada.";
+            _actual = _nueva = _repetir = string.Empty;
+        }
+        else
+        {
+            _error = r.Error;
+        }
+    }
+}

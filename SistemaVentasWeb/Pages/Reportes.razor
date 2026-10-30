@@ -1,0 +1,121 @@
+@page "/reportes"
+@attribute [Authorize(Roles = "Admin")]
+@inject ApiClient Api
+@inject IJSRuntime Js
+
+<PageTitle>Reportes</PageTitle>
+
+<h1 class="h3 mb-3">Reportes en PDF</h1>
+
+@if (_ok != null)
+{
+    <div class="alert alert-success">@_ok</div>
+}
+@if (_error != null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
+
+<div class="card shadow-sm" style="max-width:640px">
+    <div class="card-body">
+        <div class="mb-3">
+            <label class="form-label">Reporte</label>
+            <select class="form-select" @bind="_tipo">
+                <option value="stock">Stock actual</option>
+                <option value="entradas">Entradas de mercadería</option>
+                <option value="salidas">Salidas (ventas)</option>
+            </select>
+        </div>
+
+        @if (_tipo != "stock")
+        {
+            <div class="row g-2 mb-3">
+                <div class="col">
+                    <label class="form-label">Desde</label>
+                    <input type="date" class="form-control" @bind="_desde" />
+                </div>
+                <div class="col">
+                    <label class="form-label">Hasta</label>
+                    <input type="date" class="form-control" @bind="_hasta" />
+                </div>
+            </div>
+        }
+
+        <div class="mb-3">
+            <button class="btn btn-primary" disabled="@_procesando" @onclick="Descargar">Descargar PDF</button>
+        </div>
+
+        <hr />
+
+        <div class="mb-2">
+            <label class="form-label">Enviar por correo a</label>
+            <input type="email" class="form-control" placeholder="destinatario@correo.com" @bind="_email" />
+        </div>
+        <button class="btn btn-outline-primary" disabled="@_procesando" @onclick="Enviar">
+            @(_procesando ? "Procesando..." : "Enviar por correo")
+        </button>
+    </div>
+</div>
+
+@code {
+    private string _tipo = "stock";
+    private DateTime? _desde = DateTime.Today.AddDays(-30);
+    private DateTime? _hasta = DateTime.Today;
+    private string _email = string.Empty;
+    private string? _ok;
+    private string? _error;
+    private bool _procesando;
+
+    // El reporte de stock no usa fechas
+    private DateTime? DesdeEfectivo => _tipo == "stock" ? null : _desde;
+    private DateTime? HastaEfectivo => _tipo == "stock" ? null : _hasta;
+
+    private async Task Descargar()
+    {
+        _ok = null;
+        _error = null;
+        _procesando = true;
+
+        var r = await Api.DescargarReporteAsync(_tipo, DesdeEfectivo, HastaEfectivo);
+
+        if (r.Ok && r.Datos != null)
+        {
+            var nombre = $"reporte-{_tipo}-{DateTime.Now:yyyyMMdd-HHmm}.pdf";
+            await Js.InvokeVoidAsync("descargarArchivo", nombre, Convert.ToBase64String(r.Datos), "application/pdf");
+            _ok = "Reporte generado. Revisá tus descargas.";
+        }
+        else
+        {
+            _error = r.Error;
+        }
+
+        _procesando = false;
+    }
+
+    private async Task Enviar()
+    {
+        _ok = null;
+        _error = null;
+
+        if (string.IsNullOrWhiteSpace(_email) || !_email.Contains('@'))
+        {
+            _error = "Ingresá un correo de destino válido.";
+            return;
+        }
+
+        _procesando = true;
+
+        var r = await Api.EnviarReporteAsync(_tipo, _email.Trim(), DesdeEfectivo, HastaEfectivo);
+
+        if (r.Ok)
+        {
+            _ok = r.Datos?.Mensaje ?? "Reporte enviado.";
+        }
+        else
+        {
+            _error = r.Error;
+        }
+
+        _procesando = false;
+    }
+}

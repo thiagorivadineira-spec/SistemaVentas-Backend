@@ -1,0 +1,37 @@
+@inject JwtAuthStateProvider Auth
+@inject NavigationManager Nav
+
+<nav class="navbar navbar-expand navbar-dark bg-dark px-3">
+    <NavLink class="navbar-brand" href="" Match="NavLinkMatch.All">🛒 Sistema de Ventas</NavLink>
+
+    <AuthorizeView>
+        <Authorized>
+            <ul class="navbar-nav me-auto">
+                <AuthorizeView Roles="Admin,Cajero" Context="empleado">
+                    <li class="nav-item"><NavLink class="nav-link" href="pos">Punto de venta</NavLink></li>
+                    <li class="nav-item"><NavLink class="nav-link" href="stock">Stock</NavLink></li>
+                </AuthorizeView>
+                <AuthorizeView Roles="Admin" Context="administrador">
+                    <li class="nav-item"><NavLink class="nav-link" href="ingreso">Ingreso de mercadería</NavLink></li>
+                    <li class="nav-item"><NavLink class="nav-link" href="reportes">Reportes</NavLink></li>
+                    <li class="nav-item"><NavLink class="nav-link" href="usuarios">Usuarios</NavLink></li>
+                    <li class="nav-item"><NavLink class="nav-link" href="auditoria">Auditoría</NavLink></li>
+                </AuthorizeView>
+            </ul>
+
+            <span class="navbar-text me-3">
+                @context.User.Identity?.Name · @(context.User.IsInRole("Admin") ? "Administrador" : "Cajero")
+            </span>
+            <NavLink class="btn btn-outline-light btn-sm me-2" href="cuenta">Mi cuenta</NavLink>
+            <button class="btn btn-outline-light btn-sm" @onclick="CerrarSesion">Cerrar sesión</button>
+        </Authorized>
+    </AuthorizeView>
+</nav>
+
+@code {
+    private async Task CerrarSesion()
+    {
+        await Auth.CerrarSesionAsync();
+        Nav.NavigateTo("login");
+    }
+}

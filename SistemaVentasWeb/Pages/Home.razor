@@ -1,0 +1,62 @@
+@page "/"
+@attribute [Authorize]
+
+<PageTitle>Inicio</PageTitle>
+
+<AuthorizeView>
+    <h1 class="h3">Hola, @context.User.Identity?.Name</h1>
+    <p class="text-muted">
+        Ingresaste como <strong>@(context.User.IsInRole("Admin") ? "Administrador" : "Cajero")</strong>.
+        Elegí qué querés hacer:
+    </p>
+</AuthorizeView>
+
+<div class="row g-3 mt-1">
+    <AuthorizeView Roles="Admin,Cajero" Context="empleado">
+        <div class="col-md-6 col-xl-3">
+            <div class="card h-100 shadow-sm"><div class="card-body">
+                <h2 class="h5">Punto de venta</h2>
+                <p class="small text-muted">Armá el ticket y registrá la venta.</p>
+                <a class="btn btn-primary btn-sm" href="pos">Ir al punto de venta</a>
+            </div></div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="card h-100 shadow-sm"><div class="card-body">
+                <h2 class="h5">Stock</h2>
+                <p class="small text-muted">Consultá el stock actualizado y los productos a reponer.</p>
+                <a class="btn btn-primary btn-sm" href="stock">Ver stock</a>
+            </div></div>
+        </div>
+    </AuthorizeView>
+
+    <AuthorizeView Roles="Admin" Context="administrador">
+        <div class="col-md-6 col-xl-3">
+            <div class="card h-100 shadow-sm"><div class="card-body">
+                <h2 class="h5">Ingreso de mercadería</h2>
+                <p class="small text-muted">Registrá las compras a proveedores y actualizá el stock.</p>
+                <a class="btn btn-primary btn-sm" href="ingreso">Registrar ingreso</a>
+            </div></div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="card h-100 shadow-sm"><div class="card-body">
+                <h2 class="h5">Reportes PDF</h2>
+                <p class="small text-muted">Stock, entradas y salidas: descargalos o enviálos por correo.</p>
+                <a class="btn btn-primary btn-sm" href="reportes">Ir a reportes</a>
+            </div></div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="card h-100 shadow-sm"><div class="card-body">
+                <h2 class="h5">Usuarios</h2>
+                <p class="small text-muted">Alta de cajeros y administradores.</p>
+                <a class="btn btn-primary btn-sm" href="usuarios">Gestionar usuarios</a>
+            </div></div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="card h-100 shadow-sm"><div class="card-body">
+                <h2 class="h5">Auditoría</h2>
+                <p class="small text-muted">Registro de acciones y errores del sistema.</p>
+                <a class="btn btn-primary btn-sm" href="auditoria">Ver auditoría</a>
+            </div></div>
+        </div>
+    </AuthorizeView>
+</div>

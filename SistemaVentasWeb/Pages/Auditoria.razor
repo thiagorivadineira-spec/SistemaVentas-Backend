@@ -1,0 +1,125 @@
+@page "/auditoria"
+@attribute [Authorize(Roles = "Admin")]
+@inject ApiClient Api
+
+<PageTitle>Auditoría</PageTitle>
+
+<h1 class="h3 mb-3">Auditoría y registro de errores</h1>
+
+@if (_error != null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
+
+<div class="row g-2 mb-3 align-items-end">
+    <div class="col-md-3">
+        <label class="form-label small mb-1">Acción</label>
+        <select class="form-select" @bind="_accion">
+            <option value="">Todas</option>
+            @foreach (var a in _acciones)
+            {
+                <option value="@a">@a</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label class="form-label small mb-1">Desde</label>
+        <input type="date" class="form-control" @bind="_desde" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label small mb-1">Hasta</label>
+        <input type="date" class="form-control" @bind="_hasta" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label small mb-1">Buscar en el detalle</label>
+        <input class="form-control" @bind="_buscar" />
+    </div>
+    <div class="col-md-2">
+        <button class="btn btn-primary w-100" @onclick="() => Cargar(1)">Filtrar</button>
+    </div>
+</div>
+
+@if (_cargando)
+{
+    <p class="text-muted">Cargando...</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Usuario</th>
+                    <th>Acción</th>
+                    <th>Entidad</th>
+                    <th>Detalle</th>
+                    <th>IP</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in _registros)
+                {
+                    <tr class="@(r.Accion == "ERROR" || r.Accion.Contains("FALLID") ? "table-danger" : "")">
+                        <td class="text-nowrap">@Formato.Fecha(r.Fecha)</td>
+                        <td>@(r.Username ?? "—")</td>
+                        <td><code>@r.Accion</code></td>
+                        <td>@r.Entidad @(r.EntidadId.HasValue ? $"#{r.EntidadId}" : "")</td>
+                        <td class="small">@r.Detalle</td>
+                        <td class="small text-muted">@r.DireccionIp</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <p class="small text-muted">@_total registro(s).</p>
+    <Paginador Pagina="_pagina" TotalPaginas="_totalPaginas" AlCambiar="Cargar" />
+}
+
+@code {
+    private static readonly string[] _acciones =
+    {
+        "LOGIN_OK", "LOGIN_FALLIDO", "VENTA_CREADA", "COMPRA_CREADA",
+        "REPORTE_GENERADO", "REPORTE_ENVIADO", "REPORTE_ENVIO_FALLIDO",
+        "USUARIO_CREADO", "USUARIO_ACTIVADO", "USUARIO_DESACTIVADO",
+        "REGISTRO_CLIENTE", "PASSWORD_CAMBIADA", "ERROR"
+    };
+
+    private List<RegistroAuditoria> _registros = new();
+    private string _accion = string.Empty;
+    private string _buscar = string.Empty;
+    private DateTime? _desde;
+    private DateTime? _hasta;
+    private string? _error;
+    private bool _cargando;
+    private int _pagina = 1;
+    private int _totalPaginas;
+    private int _total;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Cargar(1);
+    }
+
+    private async Task Cargar(int pagina)
+    {
+        _cargando = true;
+        _error = null;
+
+        var r = await Api.GetAuditoriaAsync(pagina, 20, _accion, _desde, _hasta, _buscar);
+        _cargando = false;
+
+        if (r.Ok && r.Datos != null)
+        {
+            _registros = r.Datos.Datos;
+            _pagina = r.Datos.PaginaActual;
+            _totalPaginas = r.Datos.TotalPaginas;
+            _total = r.Datos.TotalRegistros;
+        }
+        else
+        {
+            _error = r.Error;
+        }
+    }
+}

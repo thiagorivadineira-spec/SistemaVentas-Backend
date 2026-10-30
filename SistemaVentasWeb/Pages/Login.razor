@@ -1,0 +1,95 @@
+@page "/login"
+@inject ApiClient Api
+@inject JwtAuthStateProvider Auth
+@inject NavigationManager Nav
+
+<PageTitle>Iniciar sesión</PageTitle>
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h1 class="h4 text-center mb-1">Iniciar sesión</h1>
+                <p class="text-muted text-center small mb-3">Acceso exclusivo para personal del negocio</p>
+
+                @if (_error != null)
+                {
+                    <div class="alert alert-danger py-2">@_error</div>
+                }
+
+                <EditForm Model="_modelo" OnSubmit="Ingresar">
+                    <div class="mb-3">
+                        <label class="form-label">Usuario</label>
+                        <InputText class="form-control" @bind-Value="_modelo.Username" autocomplete="username" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Contraseña</label>
+                        <InputText type="password" class="form-control" @bind-Value="_modelo.Password" autocomplete="current-password" />
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" disabled="@_cargando">
+                        @(_cargando ? "Ingresando..." : "Ingresar")
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly LoginRequest _modelo = new();
+    private string? _error;
+    private bool _cargando;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Si ya hay una sesión activa no tiene sentido mostrar el login
+        var estado = await Auth.GetAuthenticationStateAsync();
+
+        if (estado.User.Identity?.IsAuthenticated == true)
+        {
+            Nav.NavigateTo("", replace: true);
+        }
+    }
+
+    private async Task Ingresar()
+    {
+        _error = null;
+
+        if (string.IsNullOrWhiteSpace(_modelo.Username) || string.IsNullOrWhiteSpace(_modelo.Password))
+        {
+            _error = "Ingresá usuario y contraseña.";
+            return;
+        }
+
+        _cargando = true;
+        var resultado = await Api.LoginAsync(_modelo.Username.Trim(), _modelo.Password);
+        _cargando = false;
+
+        if (!resultado.Ok || resultado.Datos == null)
+        {
+            _error = resultado.Error ?? "No se pudo iniciar sesión.";
+            return;
+        }
+
+        var datos = resultado.Datos;
+
+        // Esta aplicación es el punto de venta: solo personal del negocio
+        if (datos.Rol != "Admin" && datos.Rol != "Cajero")
+        {
+            _error = "Esta aplicación es solo para personal del negocio (Cajero o Administrador).";
+            return;
+        }
+
+        await Auth.IniciarSesionAsync(new SesionUsuario
+        {
+            Token = datos.Token,
+            Expira = datos.Expira,
+            Id = datos.Id,
+            Nombre = datos.Nombre,
+            Username = datos.Username,
+            Rol = datos.Rol
+        });
+
+        Nav.NavigateTo("");
+    }
+}

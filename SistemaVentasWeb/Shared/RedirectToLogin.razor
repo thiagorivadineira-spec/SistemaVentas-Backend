@@ -1,0 +1,9 @@
+@inject NavigationManager Nav
+
+@code {
+    // Si el usuario no inició sesión, se lo manda a la pantalla de login
+    protected override void OnInitialized()
+    {
+        Nav.NavigateTo("login", replace: true);
+    }
+}

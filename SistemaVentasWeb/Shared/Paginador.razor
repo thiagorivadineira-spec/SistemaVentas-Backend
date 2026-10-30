@@ -1,0 +1,25 @@
+@if (TotalPaginas > 1)
+{
+    <nav>
+        <ul class="pagination pagination-sm justify-content-center mb-0">
+            <li class="page-item @(Pagina <= 1 ? "disabled" : "")">
+                <button class="page-link" @onclick="() => Ir(Pagina - 1)">Anterior</button>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link">Página @Pagina de @TotalPaginas</span>
+            </li>
+            <li class="page-item @(Pagina >= TotalPaginas ? "disabled" : "")">
+                <button class="page-link" @onclick="() => Ir(Pagina + 1)">Siguiente</button>
+            </li>
+        </ul>
+    </nav>
+}
+
+@code {
+    [Parameter] public int Pagina { get; set; } = 1;
+    [Parameter] public int TotalPaginas { get; set; }
+    [Parameter] public EventCallback<int> AlCambiar { get; set; }
+
+    private Task Ir(int pagina) =>
+        (pagina < 1 || pagina > TotalPaginas) ? Task.CompletedTask : AlCambiar.InvokeAsync(pagina);
+}

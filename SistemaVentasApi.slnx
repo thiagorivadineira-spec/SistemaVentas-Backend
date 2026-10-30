@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="SistemaVentasApi/SistemaVentasApi.csproj" />
+  <Project Path="SistemaVentasWeb/SistemaVentasWeb.csproj" Id="5699b3f2-aee8-4d67-bd61-0c72c046e109" />
 </Solution>

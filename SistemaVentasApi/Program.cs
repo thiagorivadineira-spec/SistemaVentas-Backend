@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using QuestPDF.Infrastructure;
 using Serilog;
 using Serilog.Events;
 using SistemaVentasApi.Data;
@@ -60,6 +61,12 @@ builder.Services.AddDbContext<DataContext>(options =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
 builder.Services.AddScoped<IAuditoriaService, AuditoriaService>();
+
+// Reportes PDF (QuestPDF, licencia Community) y envío de correo (MailKit)
+QuestPDF.Settings.License = LicenseType.Community;
+builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"));
+builder.Services.AddScoped<IReporteService, ReporteService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // Controladores
 builder.Services.AddControllers();
